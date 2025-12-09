@@ -13,13 +13,13 @@ set -x
 export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 cd /root/pia || exit 1
 
-export PF_GATEWAY=66.56.81.135
-export PF_HOSTNAME=ontario418
+export PF_GATEWAY={{PF_GATEWAY}}
+export PF_HOSTNAME={{PF_HOSTNAME}}
 
 while true; do
     echo "=== $(date) Fetching PIA token ===" >>"$DEBUG_LOG"
     export PIA_TOKEN=$(
-        PIA_USER=p9798466 PIA_PASS=nnEmPHTZ84 ./get_token.sh 2>/dev/null \
+        PIA_USER={{USERNAME}} PIA_PASS={{PASSWORD}} ./get_token.sh 2>/dev/null \
         | awk -F= '/PIA_TOKEN/ {print $2}'
     )
 
