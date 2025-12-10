@@ -1,0 +1,23 @@
+#!/sbin/openrc-run
+
+name="WireGuard PIA"
+description="Bring up WireGuard interface pia"
+
+# Dependencies
+depend() {
+    after networking
+    before netmount
+    use logger dns
+}
+
+start() {
+    ebegin "Starting WireGuard interface pia"
+    /usr/bin/wg-quick up pia
+    eend $?
+}
+
+stop() {
+    ebegin "Stopping WireGuard interface pia"
+    /usr/bin/wg-quick down pia
+    eend $?
+}
