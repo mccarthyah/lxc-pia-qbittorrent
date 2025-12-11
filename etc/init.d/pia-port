@@ -1,0 +1,41 @@
+#!/sbin/openrc-run
+
+name="pia-port"
+description="Keep PIA forwarded port updated every 5 minutes"
+
+pidfile="/run/pia-port.pid"
+
+depend() {
+    need pia-pf
+    after pia-pf
+}
+
+start() {
+    ebegin "Starting pia-port refresher"
+
+    # Start loop in background
+    /bin/sh -c '
+        while true; do
+            if [ -f /var/log/pia-pf.log ]; then
+                port=$(tail -n 7 /var/log/pia-pf.log | head -n 1 | awk "{print \$3}")
+                [ -n "$port" ] && echo "$port" > /run/pia-port.txt
+            fi
+            sleep 300  # 5 minutes
+        done
+    ' &
+
+    echo $! > "$pidfile"
+
+    eend $?
+}
+
+stop() {
+    ebegin "Stopping pia-port refresher"
+
+    if [ -f "$pidfile" ]; then
+        kill $(cat "$pidfile") 2>/dev/null
+        rm -f "$pidfile"
+    fi
+
+    eend $?
+}
