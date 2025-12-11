@@ -4,7 +4,7 @@
 
 set -e
 
-MICROSOCKS_VERSION="1.0.2"
+MICROSOCKS_VERSION="1.0.5"
 ARCH=$(uname -m)
 TMPDIR=$(mktemp -d)
 BINARY_URL="http://ftp.barfooze.de/pub/sabotage/tarballs/microsocks-${MICROSOCKS_VERSION}-${ARCH}-static.xz"
