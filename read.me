@@ -11,9 +11,14 @@ Clone repo to /opt/pia
 https://github.com/pia-foss/manual-connections
 git clone https://github.com/pia-foss/manual-connections /opt/pia
 
-
 tweak all locations as you wish
 
 launch qbittorrent-nox manually once
 log in with temporary password 
 change password and/or allow local access
+
+download microsocks
+wget http://ftp.barfooze.de/pub/sabotage/tarballs/microsocks-1.0.2-x86_64-static.xz
+xz -d microsocks-1.0.2-x86_64-static.xz
+chmod +x microsocks-1.0.2-x86_64-static
+mv microsocks-1.0.2-x86_64-static /usr/local/bin/microsocks
