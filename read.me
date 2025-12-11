@@ -13,12 +13,16 @@ git clone https://github.com/pia-foss/manual-connections /opt/pia
 
 tweak all locations as you wish
 
+make qbittorrent user with home directory 
+adduser -D -s /bin/ash qbittorrent
+mkdir -p /home/qbittorrent/.config/qBittorrent
+chown -R qbittorrent:qbittorrent /home/qbittorrent/.config
+
+
+
 launch qbittorrent-nox manually once
+su -s /bin/ash qbittorrent -c "qbittorrent-nox --webui-port=8080"
 log in with temporary password 
 change password and/or allow local access
 
-download microsocks
-wget http://ftp.barfooze.de/pub/sabotage/tarballs/microsocks-1.0.2-x86_64-static.xz
-xz -d microsocks-1.0.2-x86_64-static.xz
-chmod +x microsocks-1.0.2-x86_64-static
-mv microsocks-1.0.2-x86_64-static /usr/local/bin/microsocks
+install microsocks
