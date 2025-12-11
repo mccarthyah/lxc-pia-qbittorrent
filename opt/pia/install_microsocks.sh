@@ -7,7 +7,7 @@ set -e
 MICROSOCKS_VERSION="1.0.5"
 ARCH=$(uname -m)
 TMPDIR=$(mktemp -d)
-BINARY_URL="http://ftp.barfooze.de/pub/sabotage/tarballs/microsocks-${MICROSOCKS_VERSION}-${ARCH}-static.xz"
+BINARY_URL="http://ftp.barfooze.de/pub/sabotage/tarballs/microsocks-${MICROSOCKS_VERSION}.tar.xz"
 INSTALL_PATH="/usr/local/bin/microsocks"
 
 echo "Downloading microsocks v${MICROSOCKS_VERSION} for ${ARCH}..."
