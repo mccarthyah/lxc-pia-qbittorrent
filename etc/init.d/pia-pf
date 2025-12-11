@@ -1,0 +1,63 @@
+#!/sbin/openrc-run
+
+name="pia-pf"
+description="PIA Port Forwarding screen session"
+
+envdir="/opt/pia"
+credfile="${envdir}/credentials.env"
+optfile="${envdir}/options.env"
+
+command="/usr/bin/screen"
+command_args="-L -Logfile /var/log/pia-pf.log -dmS pia-pf /opt/pia/build.sh"
+
+pidfile="/run/pia-pf.pid"
+
+depend() {
+    need net
+}
+
+# Safely load KEY=VALUE lines from env files
+load_env_file() {
+    local file="$1"
+    [ -f "$file" ] || return 0
+
+    while IFS='=' read -r key value; do
+        # Skip blank lines and comments
+        [ -z "$key" ] && continue
+        case "$key" in
+            \#*) continue ;;
+        esac
+        # Skip keys with spaces
+        echo "$key" | grep -q '[[:space:]]' && continue
+
+        export "$key=$value"
+    done < "$file"
+}
+
+start() {
+    ebegin "Starting pia-pf"
+
+    # Load environment files into the service process
+    load_env_file "$credfile"
+    load_env_file "$optfile"
+
+    # Ensure the script runs inside /opt/pia
+    cd /opt/pia || exit 1
+
+    # Launch screen session
+    ${command} ${command_args}
+
+    # Dummy pid for OpenRC tracking
+    echo $$ > "$pidfile"
+
+    eend $?
+}
+
+stop() {
+    ebegin "Stopping pia-pf"
+
+    /usr/bin/screen -S pia-pf -X quit 2>/dev/null
+    rm -f "$pidfile"
+
+    eend $?
+}
