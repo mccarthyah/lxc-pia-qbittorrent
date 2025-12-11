@@ -23,6 +23,9 @@ chown -R qbittorrent:qbittorrent /home/qbittorrent/.config
 launch qbittorrent-nox manually once
 su -s /bin/ash qbittorrent -c "qbittorrent-nox --webui-port=8080"
 log in with temporary password 
-change password and/or allow local access
+under "webui", change password and/or allow local access
+under "advanced", change "interface" to say "pia"
+this will bind it to the vpn and avoid ip leak
+
 
 install microsocks
