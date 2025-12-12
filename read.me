@@ -15,8 +15,10 @@ tweak all locations as you wish
 
 make qbittorrent user with home directory 
 adduser -D -s /bin/ash qbittorrent
-mkdir -p /home/qbittorrent/.config/qBittorrent
-chown -R qbittorrent:qbittorrent /home/qbittorrent/.config
+mkdir -p /home/qbittorrent
+mkdir -p /home/qbittorrent/.config
+mkdir -p /home/qbittorrent/.cache
+chown -R qbittorrent:qbittorrent /home/qbittorrent
 
 
 
