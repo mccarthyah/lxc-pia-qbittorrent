@@ -6,7 +6,8 @@ rc-update add pia-port default
 rc-update add qbittorrent default
 rc-update add wg-pia default
 cd /opt/pia
+./install_microsocks.sh
 ./build_options.sh
 ./build.sh
-./install_microsocks.sh
+
 
