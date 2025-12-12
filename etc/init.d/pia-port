@@ -1,9 +1,15 @@
 #!/sbin/openrc-run
+#
+# /etc/init.d/pia-port
+# Extract PIA forwarded port and update qBittorrent config once on startup
 
 name="pia-port"
-description="Keep PIA forwarded port updated every 5 minutes"
+description="Extract PIA forwarded port and push to qBittorrent once on startup"
 
 pidfile="/run/pia-port.pid"
+LOG="/var/log/pia-pf.log"
+PORT_FILE="/run/pia-port.txt"
+QB_PF_SCRIPT="/opt/pia/qbittorrent-pf.sh"
 
 depend() {
     need pia-pf
@@ -11,31 +17,42 @@ depend() {
 }
 
 start() {
-    ebegin "Starting pia-port refresher"
+    ebegin "Extracting PIA forwarded port"
 
-    # Start loop in background
-    /bin/sh -c '
-        while true; do
-            if [ -f /var/log/pia-pf.log ]; then
-                port=$(tail -n 7 /var/log/pia-pf.log | head -n 1 | awk "{print \$3}")
-                [ -n "$port" ] && echo "$port" > /run/pia-port.txt
-            fi
-            sleep 300  # 5 minutes
-        done
-    ' &
+    # Give PIA daemon time to initialize
+    sleep 20
 
-    echo $! > "$pidfile"
+    if [ ! -f "$LOG" ]; then
+        echo "PIA log not found: $LOG"
+        eend 1
+        return
+    fi
 
-    eend $?
+    # Extract the port 7 lines from the end, strip ANSI sequences, keep only digits
+    port=$(tail -n 7 "$LOG" | head -n 1 | sed -r 's/\x1B\[[0-9;]*[mK]//g' | tr -cd '0-9')
+
+    if [ -z "$port" ]; then
+        echo "Failed to extract port from log"
+        eend 1
+        return
+    fi
+
+    # Save to /run/pia-port.txt
+    echo "$port" > "$PORT_FILE"
+    echo "PIA forwarded port saved to $PORT_FILE: $port"
+
+    # Run qbittorrent-pf script to update qBittorrent config
+    if [ -x "$QB_PF_SCRIPT" ]; then
+        "$QB_PF_SCRIPT"
+        eend $?
+    else
+        echo "qBittorrent PF script not found or not executable: $QB_PF_SCRIPT"
+        eend 1
+    fi
 }
 
 stop() {
-    ebegin "Stopping pia-port refresher"
-
-    if [ -f "$pidfile" ]; then
-        kill $(cat "$pidfile") 2>/dev/null
-        rm -f "$pidfile"
-    fi
-
-    eend $?
+    ebegin "Stopping pia-port service"
+    # Nothing to stop; one-shot
+    eend 0
 }
