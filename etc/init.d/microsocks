@@ -1,0 +1,34 @@
+#!/sbin/openrc-run
+
+name="microsocks"
+description="Microsocks SOCKS5 proxy"
+
+command="/usr/local/bin/microsocks"
+command_args="-p 1080"
+pidfile="/run/microsocks.pid"
+
+depend() {
+    need wg-pia
+    after wg-pia
+}
+
+start() {
+    ebegin "Starting microsocks"
+
+    # Launch microsocks silently in background
+    /usr/local/bin/microsocks -p 1080 >/dev/null 2>&1 &
+    echo $! > "$pidfile"
+
+    eend $?
+}
+
+stop() {
+    ebegin "Stopping microsocks"
+
+    if [ -f "$pidfile" ]; then
+        kill $(cat "$pidfile") 2>/dev/null
+        rm -f "$pidfile"
+    fi
+
+    eend $?
+}
