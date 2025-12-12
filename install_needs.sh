@@ -6,10 +6,11 @@ rc-update add pia-port default
 rc-update add qbittorrent default
 rc-update add wg-pia default
 
+adduser -D -h /home/qbittorrent -s /bin/ash qbittorrent
 mkdir -p /home/qbittorrent
 mkdir -p /home/qbittorrent/.config
 mkdir -p /home/qbittorrent/.cache
-adduser -D -h -s /bin/ash qbittorrent
+
 
 ./qbt_local_auth.sh
 chown -R qbittorrent:qbittorrent /home/qbittorrent
