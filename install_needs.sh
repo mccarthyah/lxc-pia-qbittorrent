@@ -1,3 +1,4 @@
+adduser -D -h /home/qbittorrent -s /bin/ash qbittorrent
 apk add xz screen wireguard-tools qbittorrent-nox git nano ncurses jq iptables curl
 cp -r etc opt /
 rc-update add microsocks default
