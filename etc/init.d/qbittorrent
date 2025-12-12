@@ -1,0 +1,42 @@
+#!/sbin/openrc-run
+
+name="qbittorrent-nox"
+description="qBittorrent-nox daemon"
+
+# Run as this user
+command_user="qbittorrent:qbittorrent"
+
+# Path to the binary
+command="/usr/bin/qbittorrent-nox"
+
+# Arguments
+command_args="--webui-port=8080"
+
+# Daemonize
+pidfile="/run/qbittorrent.pid"
+
+depend() {
+    need net
+    use logger
+    need wg-pia
+    need pia-port
+}
+
+start_pre() {
+    # Ensure PID dir exists
+    mkdir -p /run
+    chown qbittorrent:qbittorrent /run
+}
+
+start() {
+    ebegin "Starting $name"
+    start-stop-daemon --start --background --make-pidfile --pidfile $pidfile \
+        --chuid $command_user --exec $command -- $command_args
+    eend $?
+}
+
+stop() {
+    ebegin "Stopping $name"
+    start-stop-daemon --stop --pidfile $pidfile
+    eend $?
+}
