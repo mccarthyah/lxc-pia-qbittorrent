@@ -9,8 +9,8 @@ adduser -D -h /home/qbittorrent -s /bin/ash qbittorrent
 mkdir -p /home/qbittorrent
 mkdir -p /home/qbittorrent/.config
 mkdir -p /home/qbittorrent/.cache
+./qbt_local_auth.sh
 chown -R qbittorrent:qbittorrent /home/qbittorrent
-
 
 
 cd /opt/pia
