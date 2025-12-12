@@ -1,0 +1,44 @@
+#!/sbin/openrc-run
+
+name="qbittorrent-set-port"
+description="Set qBittorrent incoming port from PIA forwarded port"
+
+depend() {
+    need net
+    need qbittorrent
+    after qbittorrent
+}
+
+PORT_FILE="/run/pia-port.txt"
+QBT_URL="http://localhost:8080"
+LOG="/var/log/qbittorrent-set-port.log"
+
+start() {
+    ebegin "Setting qBittorrent incoming port"
+
+    if [ ! -f "$PORT_FILE" ]; then
+        eerror "Port file not found: $PORT_FILE"
+        return 1
+    fi
+
+    PORT="$(cat "$PORT_FILE" | tr -cd '0-9')"
+
+    if [ -z "$PORT" ]; then
+        eerror "Invalid port value"
+        return 1
+    fi
+
+    echo "$(date) Setting port to $PORT" >> "$LOG"
+
+    curl -sf -X POST \
+        -d "json={\"listen_port\": $PORT}" \
+        "$QBT_URL/api/v2/app/setPreferences" \
+        >> "$LOG" 2>&1
+
+    if [ $? -ne 0 ]; then
+        eerror "Failed to set port"
+        return 1
+    fi
+
+    eend 0
+}
