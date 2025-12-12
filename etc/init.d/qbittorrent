@@ -13,8 +13,8 @@ depend() {
     need net
     use logger
     need wg-pia
-    need pia-port
-    after pia-port
+#    need pia-port
+#    after pia-port
 }
 
 start_pre() {
