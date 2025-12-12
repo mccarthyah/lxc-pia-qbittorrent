@@ -3,18 +3,12 @@
 name="qbittorrent-nox"
 description="qBittorrent-nox daemon"
 
-# Run as this user
-command_user="qbittorrent:qbittorrent"
-
-# Path to the binary
 command="/usr/bin/qbittorrent-nox"
-
-# Arguments
 command_args="--webui-port=8080"
 
-# Daemonize
 pidfile="/run/qbittorrent.pid"
 
+# Ensure correct service dependencies
 depend() {
     need net
     use logger
@@ -23,15 +17,26 @@ depend() {
 }
 
 start_pre() {
-    # Ensure PID dir exists
+    # Ensure runtime directory exists
     mkdir -p /run
     chown qbittorrent:qbittorrent /run
+
+    # Ensure HOME and required dirs exist
+    mkdir -p /home/qbittorrent/.config
+    mkdir -p /home/qbittorrent/.cache
+    mkdir -p /home/qbittorrent/.local/share
+    mkdir -p /home/qbittorrent/Downloads
+
+    chown -R qbittorrent:qbittorrent /home/qbittorrent
 }
 
 start() {
     ebegin "Starting $name"
-    start-stop-daemon --start --background --make-pidfile --pidfile $pidfile \
-        --chuid $command_user --exec $command -- $command_args
+    start-stop-daemon --start --background \
+        --make-pidfile --pidfile $pidfile \
+        --user qbittorrent \
+        --env HOME="/home/qbittorrent" \
+        --exec $command -- $command_args
     eend $?
 }
 
