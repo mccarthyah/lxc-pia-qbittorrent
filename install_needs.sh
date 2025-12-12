@@ -5,6 +5,7 @@ rc-update add pia-pf default
 rc-update add pia-port default
 rc-update add qbittorrent default
 rc-update add wg-pia default
+mkdir -p /home/qbittorrent
 adduser -D -h /home/qbittorrent -s /bin/ash qbittorrent
 mkdir -p /home/qbittorrent
 mkdir -p /home/qbittorrent/.config
