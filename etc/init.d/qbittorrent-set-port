@@ -1,43 +1,62 @@
 #!/sbin/openrc-run
 
-name="qbittorrent-set-port"
-description="Set qBittorrent incoming port from PIA forwarded port"
+description="Extract PIA forwarded port and keep qBittorrent updated"
 
 depend() {
     need net
+    need pia-pf
     need qbittorrent
-    after qbittorrent
+    after pia-pf qbittorrent
 }
 
+pidfile="/run/qbittorrent-set-port.pid"
+
+LOG="/var/log/pia-pf.log"
 PORT_FILE="/run/pia-port.txt"
 QBT_URL="http://localhost:8080"
-LOG="/var/log/qbittorrent-set-port.log"
+INTERVAL=600
+STARTUP_DELAY=20
 
 start() {
-    ebegin "Setting qBittorrent incoming port"
+    ebegin "Starting qbittorrent-set-port"
 
-    if [ ! -f "$PORT_FILE" ]; then
-        eerror "Port file not found: $PORT_FILE"
-        return 1
-    fi
+    (
+        sleep "$STARTUP_DELAY"
+        last_port=""
 
-    PORT="$(cat "$PORT_FILE" | tr -cd '0-9')"
+        while true; do
+            if [ -f "$LOG" ]; then
+                port="$(tail -n 7 "$LOG" \
+                    | head -n 1 \
+                    | sed -r 's/\x1B\[[0-9;]*[mK]//g' \
+                    | tr -cd '0-9')"
 
-    if [ -z "$PORT" ]; then
-        eerror "Invalid port value"
-        return 1
-    fi
+                if [ -n "$port" ] && [ "$port" != "$last_port" ]; then
+                    echo "$port" > "$PORT_FILE"
 
-    echo "$(date) Setting port to $PORT" >> "$LOG"
+                    curl -sf -X POST \
+                        -d "json={\"listen_port\": $port}" \
+                        "$QBT_URL/api/v2/app/setPreferences" \
+                        >> /var/log/qbittorrent-set-port.log 2>&1
 
-    curl -sf -X POST \
-        -d "json={\"listen_port\": $PORT}" \
-        "$QBT_URL/api/v2/app/setPreferences" \
-        >> "$LOG" 2>&1
+                    last_port="$port"
+                fi
+            fi
 
-    if [ $? -ne 0 ]; then
-        eerror "Failed to set port"
-        return 1
+            sleep "$INTERVAL"
+        done
+    ) &
+
+    echo $! > "$pidfile"
+    eend 0
+}
+
+stop() {
+    ebegin "Stopping qbittorrent-set-port"
+
+    if [ -f "$pidfile" ]; then
+        kill "$(cat "$pidfile")" 2>/dev/null
+        rm -f "$pidfile"
     fi
 
     eend 0
