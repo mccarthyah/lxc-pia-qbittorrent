@@ -3,12 +3,48 @@ set -e
 
 echo "=== Adding qbittorrent user and home directories ==="
 adduser -D -h /home/qbittorrent -s /bin/ash qbittorrent
-mkdir -p /home/qbittorrent/.config
+mkdir -p /home/qbittorrent/.config/qBittorrent
 mkdir -p /home/qbittorrent/.cache
 
 echo "=== Installing required packages ==="
-apk add --no-cache xz screen wireguard-tools qbittorrent-nox git nano ncurses jq iptables curl
+apk add --no-cache \
+    xz screen wireguard-tools qbittorrent-nox git nano ncurses jq \
+    iptables curl unzip
 
+# --------------------------------------------------
+# Download latest VueTorrent release
+# --------------------------------------------------
+echo "=== Downloading latest VueTorrent release ==="
+
+VT_DIR="/home/qbittorrent/.config/qBittorrent"
+VT_UI_DIR="$VT_DIR/vuetorrent"
+VT_ZIP="$VT_DIR/vuetorrent-latest.zip"
+
+# Get latest tag name
+TAG=$(curl -s https://api.github.com/repos/VueTorrent/VueTorrent/releases/latest \
+    | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
+
+echo "Latest VueTorrent tag: $TAG"
+
+# Construct download URL
+URL="https://github.com/VueTorrent/VueTorrent/releases/download/$TAG/vuetorrent.zip"
+
+# Clean old UI
+rm -rf "$VT_UI_DIR"
+mkdir -p "$VT_UI_DIR"
+
+# Download and extract
+curl -sL "$URL" -o "$VT_ZIP"
+unzip -q "$VT_ZIP" -d "$VT_UI_DIR"
+rm -f "$VT_ZIP"
+
+chown -R qbittorrent:qbittorrent /home/qbittorrent
+
+echo "VueTorrent installed to $VT_UI_DIR"
+
+# --------------------------------------------------
+# Clone repo files
+# --------------------------------------------------
 echo "=== Cloning repo files to LXC ==="
 git clone https://github.com/mccarthyah/lxc-pia-qbittorrent.git
 cd lxc-pia-qbittorrent
@@ -47,8 +83,11 @@ rc-status
 
 echo "=== Setup complete ==="
 
-# === Print final message with system IP for WebUI access ===
+# --------------------------------------------------
+# Final access message
+# --------------------------------------------------
 SYSTEM_IP=$(ip addr show | awk '/inet / && !/127.0.0.1/ {sub(/\/.*/, "", $2); print $2; exit}')
+
 echo
 echo "=============================================="
 echo "PIA VPN now active with Port Forwarding,"
