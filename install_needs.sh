@@ -42,3 +42,13 @@ service microsocks start
 rc-status
 
 echo "=== Setup complete ==="
+
+# === Print final message with system IP for WebUI access ===
+SYSTEM_IP=$(ip addr show | awk '/inet / && !/127.0.0.1/ {sub(/\/.*/, "", $2); print $2; exit}')
+echo
+echo "=============================================="
+echo "PIA VPN now active with Port Forwarding,"
+echo "connected to the fastest server supporting port forwarding."
+echo "You can access the WebUI for qbittorrent at:"
+echo "http://${SYSTEM_IP}:8080"
+echo "=============================================="
