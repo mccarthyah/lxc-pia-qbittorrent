@@ -15,6 +15,6 @@ chmod +x install_needs.sh
 ./install_needs.sh
 
 
-Local authentication is disabled for localhost and local subnet. Forwarded port will be updated as necessary with the web API. A microsocks socks5 proxy is running on port 1080 with no authentication. 
+Local authentication is disabled for localhost and local subnet. Forwarded port will be updated as necessary with the web API. A microsocks socks5 proxy is running on port 1080 with no authentication. VueTorrent alternate webUI is installed.  
 
 Please use at your own risk. I am not a programmer, just a sledgehammer hobbyist. Any suggestions are welcomed. 
