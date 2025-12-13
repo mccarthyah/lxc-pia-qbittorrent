@@ -4,10 +4,7 @@ CONF_DIR="/home/qbittorrent/.config/qBittorrent"
 CONF_FILE="$CONF_DIR/qBittorrent.conf"
 
 # ---------- Detect local subnet (/24) ----------
-# Get the first non-loopback IPv4 address
 IP=$(ip -4 addr show | awk '/inet/ && $2 !~ /^127/ {print $2; exit}' | cut -d/ -f1)
-
-# Convert to /24
 SUBNET=$(echo "$IP" | awk -F. '{printf "%s.%s.%s.0/24", $1, $2, $3}')
 
 echo "Detected subnet: $SUBNET"
@@ -29,25 +26,32 @@ BEGIN {
     new1 = "WebUI\\AuthSubnetWhitelist=" SUBNET;
     new2 = "WebUI\\AuthSubnetWhitelistEnabled=true";
     new3 = "WebUI\\LocalHostAuth=false";
+    new4 = "WebUI\\AlternativeUIEnabled=true";
+    new5 = "WebUI\\RootFolder=/home/qbittorrent/.config/qBittorrent/vuetorrent";
 }
 
 /^\[Preferences\]/ {
     print;
     in_pref = 1;
 
-    # Insert new settings immediately after [Preferences]
+    # Insert desired settings immediately after [Preferences]
     print new1
     print new2
     print new3
+    print new4
+    print new5
 
     next
 }
 
 in_pref && /^\[/ { in_pref = 0 }
 
-/^WebUI\\AuthSubnetWhitelist=/ { if(in_pref) next }
-/^WebUI\\AuthSubnetWhitelistEnabled=/ { if(in_pref) next }
-/^WebUI\\LocalHostAuth=/ { if(in_pref) next }
+# Remove old versions of the same keys inside [Preferences]
+in_pref && /^WebUI\\AuthSubnetWhitelist=/ { next }
+in_pref && /^WebUI\\AuthSubnetWhitelistEnabled=/ { next }
+in_pref && /^WebUI\\LocalHostAuth=/ { next }
+in_pref && /^WebUI\\AlternativeUIEnabled=/ { next }
+in_pref && /^WebUI\\RootFolder=/ { next }
 
 { print }
 ' "$CONF_FILE" > "$CONF_FILE.tmp"
