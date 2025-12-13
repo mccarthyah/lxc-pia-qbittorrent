@@ -9,6 +9,10 @@ mkdir -p /home/qbittorrent/.cache
 echo "=== Installing required packages ==="
 apk add --no-cache xz screen wireguard-tools qbittorrent-nox git nano ncurses jq iptables curl
 
+echo "=== Cloning repo files to LXC ==="
+git clone https://github.com/mccarthyah/lxc-pia-qbittorrent.git
+cd lxc-pia-qbittorrent
+
 echo "=== Copying repo files into LXC filesystem ==="
 cp -r etc opt /
 
