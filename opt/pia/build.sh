@@ -1,56 +1,92 @@
 #!/usr/bin/env bash
+set -euo pipefail
 
-wg-quick down pia
+# --------------------------------------------------
+# Utility functions
+# --------------------------------------------------
+log_info() { echo -e "\033[1;34m[INFO]\033[0m $*"; }
+log_warn() { echo -e "\033[1;33m[WARN]\033[0m $*"; }
+log_error() { echo -e "\033[1;31m[ERROR]\033[0m $*"; }
 
-# === Load options ===
-if [[ -f options.env ]]; then
-    source options.env
+# --------------------------------------------------
+# Bring down WireGuard if already running
+# --------------------------------------------------
+if command -v wg-quick >/dev/null 2>&1; then
+    log_info "Bringing down WireGuard interface 'pia' if exists..."
+    wg-quick down pia 2>/dev/null || true
 fi
 
-# === Load credentials ===
-if [[ -f credentials.env ]]; then
-    source credentials.env
+# --------------------------------------------------
+# Load options.env safely
+# --------------------------------------------------
+if [[ -f options.env ]]; then
+    log_info "Loading options from options.env..."
+    source options.env
 else
-    echo "Creating credentials.env for PIA login..."
-    read -rp "PIA username (p#######): " PIA_USER
-    read -rsp "PIA password: " PIA_PASS
-    echo
+    log_warn "options.env not found, continuing with defaults..."
+fi
+
+# --------------------------------------------------
+# Load or prompt for PIA credentials
+# --------------------------------------------------
+load_credentials() {
+    if [[ -f credentials.env ]]; then
+        source credentials.env
+    fi
+
+    # Username: exactly 8 chars, start with 'p'
+    while true; do
+        if [[ -z "${PIA_USER:-}" ]] || [[ ! "$PIA_USER" =~ ^p.{7}$ ]]; then
+            read -rp "PIA username (must start with 'p' and be exactly 8 chars): " PIA_USER
+            continue
+        fi
+        break
+    done
+
+    # Password: at least 8 chars
+    while true; do
+        if [[ -z "${PIA_PASS:-}" ]] || [[ ${#PIA_PASS} -lt 8 ]]; then
+            read -rsp "PIA password (at least 8 chars): " PIA_PASS
+            echo
+            continue
+        fi
+        break
+    done
+
+    # Save credentials safely
     echo "PIA_USER=$PIA_USER" > credentials.env
     echo "PIA_PASS=$PIA_PASS" >> credentials.env
-fi
+    chmod 600 credentials.env
+    log_info "Credentials saved to credentials.env"
+}
 
-# === Export credentials ===
+load_credentials
+
+# Export for child scripts
 export PIA_USER
 export PIA_PASS
 
-# === Export all options ===
-export AUTOCONNECT
-export VPN_PROTOCOL
-export PIA_PF
-export DISABLE_IPV6
-export PREFERRED_REGION
-export DIP_TOKEN
-export PIA_DNS
+# --------------------------------------------------
+# Validate options variables
+# --------------------------------------------------
+validate_option() {
+    local name="$1"
+    local val="${!name:-}"
+    local required="$2"
 
-# === Debug printout ===
-echo "Using configuration from options.env:"
-echo "AUTOCONNECT=$AUTOCONNECT"
-echo "VPN_PROTOCOL=$VPN_PROTOCOL"
-echo "PIA_PF=$PIA_PF"
-echo "DISABLE_IPV6=$DISABLE_IPV6"
-echo "PREFERRED_REGION=$PREFERRED_REGION"
-echo "DIP_TOKEN=$DIP_TOKEN"
-echo "PIA_DNS=$PIA_DNS"
+    if [[ "$required" == "true" ]] && [[ -z "$val" ]]; then
+        log_error "Required option '$name' is missing in options.env"
+        exit 1
+    fi
+}
 
-# === Run the setup script in the background ===
-./run_setup.sh &
-SETUP_PID=$!
+for var in AUTOCONNECT VPN_PROTOCOL PIA_PF DISABLE_IPV6 PREFERRED_REGION DIP_TOKEN PIA_DNS; do
+    validate_option "$var" false
+done
 
-echo "run_setup.sh started with PID $SETUP_PID. It will be killed after 1 minute."
+# Export all options
+export AUTOCONNECT VPN_PROTOCOL PIA_PF DISABLE_IPV6 PREFERRED_REGION DIP_TOKEN PIA_DNS
 
-# === Wait 1 minute ===
-sleep 60
-
-# === Kill the setup script ===
-kill $SETUP_PID 2>/dev/null || true
-echo "run_setup.sh (PID $SETUP_PID) has been killed."
+# --------------------------------------------------
+# Debug print
+#
