@@ -28,10 +28,10 @@ function update_script() {
   msg_info "Updating packages"
   $STD apk -U upgrade
   msg_ok "Updated packages"
-
+apk add git
     msg_info "Installing VPN and Torrent System"
-    wget -O install_needs.sh https://raw.githubusercontent.com/mccarthyah/lxc-pia-qbittorrent/refs/heads/main/install_needs.sh
-    chmod +x install_needs.sh
+    git clone https://github.com/mccarthyah/lxc-pia-qbittorrent.git
+    cd lxc-pia-qbittorrent
     ./install_needs.sh
     msg_ok "Installed and Torrent"
 
