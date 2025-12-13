@@ -49,7 +49,7 @@ SETUP_PID=$!
 echo "run_setup.sh started with PID $SETUP_PID. It will be killed after 1 minute."
 
 # === Wait 1 minute ===
-sleep 60
+sleep 30
 
 # === Kill the setup script ===
 kill $SETUP_PID 2>/dev/null || true
