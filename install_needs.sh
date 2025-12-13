@@ -39,5 +39,6 @@ service pia-pf start
 service qbittorrent start
 service qbittorrent-set-port start
 service microsocks start
+rc-status
 
 echo "=== Setup complete ==="
