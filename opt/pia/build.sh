@@ -42,5 +42,15 @@ echo "PREFERRED_REGION=$PREFERRED_REGION"
 echo "DIP_TOKEN=$DIP_TOKEN"
 echo "PIA_DNS=$PIA_DNS"
 
-# === Run the setup script ===
-./run_setup.sh
+# === Run the setup script in the background ===
+./run_setup.sh &
+SETUP_PID=$!
+
+echo "run_setup.sh started with PID $SETUP_PID. It will be killed after 1 minute."
+
+# === Wait 1 minute ===
+sleep 60
+
+# === Kill the setup script ===
+kill $SETUP_PID 2>/dev/null || true
+echo "run_setup.sh (PID $SETUP_PID) has been killed."
