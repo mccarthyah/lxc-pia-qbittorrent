@@ -12,6 +12,7 @@ depend() {
 
 start() {
     ebegin "Starting WireGuard interface pia"
+    /usr/bin/wg-quick down pia
     /usr/bin/wg-quick up pia
     eend $?
 }
