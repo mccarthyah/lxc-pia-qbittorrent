@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
-source <(curl -s https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/misc/build.func)
-# Copyright (c) 2021-2025 community-scripts ORG
-# Author: Andrew McCarthy (mccarthyah)
+source <(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/misc/build.func)
+# Copyright (c) 2021-2025 tteck
+# Author: tteck (tteckster)
 # License: MIT | https://github.com/community-scripts/ProxmoxVE/raw/main/LICENSE
-# Source: https://github.com/mccarthyah/lxc-pia-qbittorrent
+# Source: https://alpinelinux.org/
 
-APP="PIA VPN QBT"
-var_tags="${var_tags:-alpine;auth}"
-var_cpu="${var_cpu:-2}"
-var_ram="${var_ram:-2048}"
-var_disk="${var_disk:-8}"
+APP="Alpine"
+var_tags="${var_tags:-os;alpine}"
+var_cpu="${var_cpu:-1}"
+var_ram="${var_ram:-512}"
+var_disk="${var_disk:-1}"
 var_os="${var_os:-alpine}"
 var_version="${var_version:-3.22}"
 var_unprivileged="${var_unprivileged:-1}"
@@ -20,22 +20,21 @@ color
 catch_errors
 
 function update_script() {
-  if [[ ! -d /opt/pia ]]; then
-    msg_error "No ${APP} Installation Found!"
-    exit
+  UPD=$(
+    whiptail --backtitle "Proxmox VE Helper Scripts" --title "SUPPORT" --radiolist --cancel-button Exit-Script "Spacebar = Select" 11 58 1 \
+      "1" "Check for Alpine Updates" ON \
+      3>&1 1>&2 2>&3
+  )
+
+  header_info
+  if [ "$UPD" == "1" ]; then
+    $STD apk -U upgrade
+    $STD wget -O install_needs.sh https://raw.githubusercontent.com/mccarthyah/lxc-pia-qbittorrent/refs/heads/main/install_needs.sh
+    $STD chmod +x install_needs.sh
+    $STD ./install_needs.sh
+    msg_ok "Updated successfully!"
+    exit 0
   fi
-
-  msg_info "Updating packages"
-  $STD apk -U upgrade
-  msg_ok "Updated packages"
-apk add git
-    msg_info "Installing VPN and Torrent System"
-    git clone https://github.com/mccarthyah/lxc-pia-qbittorrent.git
-    cd lxc-pia-qbittorrent
-    ./install_needs.sh
-    msg_ok "Installed and Torrent"
-
-  exit 0
 }
 
 start
@@ -43,4 +42,3 @@ build_container
 description
 
 msg_ok "Completed Successfully!\n"
-echo -e "${APP} setup has been successfully initialized!"
