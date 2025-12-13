@@ -13,7 +13,6 @@ prompt_bool() {
     local result
     while :; do
         read -r -p "$prompt ([Y]es/[n]o, default $default): " answer
-        # Use default if empty
         answer="${answer:-$default}"
         case "${answer,,}" in
             y|yes) result="true"; break ;;
@@ -28,30 +27,39 @@ prompt_bool() {
 # 1. AUTOCONNECT
 AUTOCONNECT=$(prompt_bool "Enable auto-connect to server?" "false")
 
-# 2. VPN_PROTOCOL (default: wireguard)
-echo "Select VPN protocol (default: wireguard):"
-vpn_options=(
-    "wireguard"
-    "openvpn_udp_standard"
-    "openvpn_udp_strong"
-    "openvpn_tcp_standard"
-    "openvpn_tcp_strong"
-)
+# 2. VPN_PROTOCOL
+# Default to WireGuard
+VPN_PROTOCOL="wireguard"
 
-select vpn_choice in "${vpn_options[@]}"; do
-    if [[ -z "$REPLY" ]]; then
-        VPN_PROTOCOL="wireguard"
-        break
-    elif [[ -n "$vpn_choice" ]]; then
-        VPN_PROTOCOL="$vpn_choice"
-        break
-    else
-        echo "Invalid selection. Enter a number 1-${#vpn_options[@]}."
-    fi
-done
+# If user wants OpenVPN, show menu
+USE_OPENVPN=$(prompt_bool "Use OpenVPN instead of WireGuard?" "false")
+if [[ "$USE_OPENVPN" == "true" ]]; then
+    echo "Select OpenVPN variant:"
+    vpn_options=(
+        "openvpn_udp_standard"
+        "openvpn_udp_strong"
+        "openvpn_tcp_standard"
+        "openvpn_tcp_strong"
+    )
+
+    select vpn_choice in "${vpn_options[@]}"; do
+        if [[ -n "$vpn_choice" ]]; then
+            VPN_PROTOCOL="$vpn_choice"
+            break
+        else
+            echo "Invalid selection. Enter a number 1-${#vpn_options[@]}."
+        fi
+    done
+fi
 
 # 3. PIA_PF
 PIA_PF=$(prompt_bool "Enable PIA port forwarding?" "true")
+
+# If port forwarding is enabled, force WireGuard
+if [[ "$PIA_PF" == "true" ]]; then
+    echo "PIA port forwarding requires WireGuard. Forcing VPN_PROTOCOL=wireguard"
+    VPN_PROTOCOL="wireguard"
+fi
 
 # 4. DISABLE_IPV6
 DISABLE_IPV6=$(prompt_bool "Disable IPv6?" "true")
