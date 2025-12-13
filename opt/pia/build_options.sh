@@ -18,7 +18,7 @@ prompt_bool() {
         case "${answer,,}" in
             y|yes) result="true"; break ;;
             n|no)  result="false"; break ;;
-            true|false) result="$answer"; break ;;  # Allow typing true/false directly
+            true|false) result="$answer"; break ;;
             *) echo "Please answer Y or n." ;;
         esac
     done
@@ -28,11 +28,21 @@ prompt_bool() {
 # 1. AUTOCONNECT
 AUTOCONNECT=$(prompt_bool "Enable auto-connect to server?" "false")
 
-# 2. VPN_PROTOCOL
-echo "Select VPN protocol:"
-vpn_options=("wireguard" "openvpn_udp_standard" "openvpn_udp_strong" "openvpn_tcp_standard" "openvpn_tcp_strong")
+# 2. VPN_PROTOCOL (default: wireguard)
+echo "Select VPN protocol (default: wireguard):"
+vpn_options=(
+    "wireguard"
+    "openvpn_udp_standard"
+    "openvpn_udp_strong"
+    "openvpn_tcp_standard"
+    "openvpn_tcp_strong"
+)
+
 select vpn_choice in "${vpn_options[@]}"; do
-    if [[ -n $vpn_choice ]]; then
+    if [[ -z "$REPLY" ]]; then
+        VPN_PROTOCOL="wireguard"
+        break
+    elif [[ -n "$vpn_choice" ]]; then
         VPN_PROTOCOL="$vpn_choice"
         break
     else
