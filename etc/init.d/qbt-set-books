@@ -12,8 +12,6 @@ pidfile="/run/qb-set-books.pid"
 LOG="/var/log/qb-set-books.log"
 
 QB_URL="http://localhost:8080"
-QB_USER="admin"
-QB_PASS="adminadmin"
 TARGET_TRACKER="myanonymouse.net"
 CATEGORY_NAME="books"
 INTERVAL=300
@@ -24,27 +22,16 @@ start() {
 
     (
         sleep "$STARTUP_DELAY"
-        last_seen=""
+        echo "$(date) - Service started" >> "$LOG"
 
         while true; do
-            # Login and get cookies
-            cookie=$(curl -s -c - -d "username=$QB_USER&password=$QB_PASS" \
-                "$QB_URL/api/v2/auth/login" | grep -o "Ok.")
-
-            if [ "$cookie" != "Ok." ]; then
-                echo "$(date) - Login failed" >> "$LOG"
-                sleep "$INTERVAL"
-                continue
-            fi
-
             # Get all torrents
-            torrents=$(curl -s -b cookies.txt "$QB_URL/api/v2/torrents/info")
+            torrents=$(curl -s "$QB_URL/api/v2/torrents/info")
 
             # Parse hashes of torrents with target tracker
             hashes=$(echo "$torrents" \
                 | grep -Po '"hash":"\K[0-9a-f]+' \
                 | while read h; do
-                    # Extract tracker URLs for this hash
                     tracker=$(echo "$torrents" | grep -Po '"hash":"'"$h"'"(.*?)"tracker":"\K[^"]+')
                     if echo "$tracker" | grep -q "$TARGET_TRACKER"; then
                         echo "$h"
@@ -53,9 +40,10 @@ start() {
 
             # Set category for each matching torrent
             for h in $hashes; do
-                curl -s -b cookies.txt -X POST \
+                curl -s -X POST \
                     -d "hash=$h&category=$CATEGORY_NAME" \
                     "$QB_URL/api/v2/torrents/setCategory" >> "$LOG" 2>&1
+                echo "$(date) - Set torrent $h category to $CATEGORY_NAME" >> "$LOG"
             done
 
             sleep "$INTERVAL"
