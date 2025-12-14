@@ -1,0 +1,23 @@
+{
+    "apps": {
+        "save_path": "/zfsmount/media/apps"
+    },
+    "books": {
+        "save_path": "/zfsmount/media/books"
+    },
+    "games": {
+        "save_path": "/zfsmount/media/games"
+    },
+    "movies": {
+        "save_path": "/zfsmount/media/movies"
+    },
+    "music": {
+        "save_path": "/zfsmount/media/music"
+    },
+    "os": {
+        "save_path": "/zfsmount/media/os"
+    },
+    "tv": {
+        "save_path": "/zfsmount/media/tv"
+    }
+}
