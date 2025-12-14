@@ -3,9 +3,16 @@
 name="microsocks"
 description="Microsocks SOCKS5 proxy"
 
+# Path to microsocks binary
 command="/usr/local/bin/microsocks"
+# Command arguments
 command_args="-p 1080"
+# PID file
 pidfile="/run/microsocks.pid"
+# Log file
+LOG="/var/log/microsocks.log"
+# Startup delay to ensure VPN is up
+STARTUP_DELAY=10
 
 depend() {
     need wg-pia
@@ -15,9 +22,16 @@ depend() {
 start() {
     ebegin "Starting microsocks"
 
-    # Launch microsocks silently in background
-    /usr/local/bin/microsocks -p 1080 >/dev/null 2>&1 &
-    echo $! > "$pidfile"
+    # Sleep briefly to let VPN come up
+    sleep "$STARTUP_DELAY"
+
+    # Use start-stop-daemon to run in background with PID file
+    start-stop-daemon --start \
+        --quiet \
+        --background \
+        --make-pidfile \
+        --pidfile "$pidfile" \
+        --exec "$command" -- $command_args >> "$LOG" 2>&1
 
     eend $?
 }
@@ -25,10 +39,18 @@ start() {
 stop() {
     ebegin "Stopping microsocks"
 
-    if [ -f "$pidfile" ]; then
-        kill $(cat "$pidfile") 2>/dev/null
-        rm -f "$pidfile"
-    fi
+    start-stop-daemon --stop --quiet --pidfile "$pidfile"
+    rm -f "$pidfile"
 
-    eend $?
+    eend 0
+}
+
+status() {
+    if [ -f "$pidfile" ] && kill -0 $(cat "$pidfile") 2>/dev/null; then
+        echo "microsocks is running (PID $(cat "$pidfile"))"
+        return 0
+    else
+        echo "microsocks is not running"
+        return 1
+    fi
 }
