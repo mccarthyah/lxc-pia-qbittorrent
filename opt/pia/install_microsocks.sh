@@ -1,26 +1,30 @@
 #!/bin/sh
 # install-microsocks.sh
-# Downloads and installs precompiled microsocks on Alpine Linux
+# Downloads and installs precompiled microsocks (ms.xz) on Alpine Linux
 
 set -e
 
-MICROSOCKS_VERSION="1.0.5"
-ARCH=$(uname -m)
 TMPDIR=$(mktemp -d)
-BINARY_URL="http://ftp.barfooze.de/pub/sabotage/tarballs/microsocks-${MICROSOCKS_VERSION}.tar.xz"
+BINARY_URL="http://ftp.barfooze.de/pub/sabotage/bin/ms.xz"
 INSTALL_PATH="/usr/local/bin/microsocks"
 
-echo "Downloading microsocks v${MICROSOCKS_VERSION} for ${ARCH}..."
-wget -O "$TMPDIR/microsocks.xz" "$BINARY_URL"
+echo "Downloading microsocks binary..."
+wget -O "$TMPDIR/ms.xz" "$BINARY_URL"
 
 echo "Decompressing..."
-xz -d "$TMPDIR/microsocks.xz"
+xz -d "$TMPDIR/ms.xz"
+
+# After decompression, the file is "$TMPDIR/ms"
+if [ ! -f "$TMPDIR/ms" ]; then
+    echo "Error: decompressed binary not found!"
+    exit 1
+fi
 
 echo "Making executable..."
-chmod +x "$TMPDIR/microsocks"
+chmod +x "$TMPDIR/ms"
 
 echo "Installing to $INSTALL_PATH..."
-mv "$TMPDIR/microsocks" "$INSTALL_PATH"
+mv "$TMPDIR/ms" "$INSTALL_PATH"
 
 echo "Cleaning up..."
 rm -rf "$TMPDIR"
