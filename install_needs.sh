@@ -51,6 +51,8 @@ cd lxc-pia-qbittorrent
 
 echo "=== Copying repo files into LXC filesystem ==="
 cp -r etc opt /
+mkdir -p /home/qbittorrent/.config/qBittorren
+cp categories.json /home/qbittorrent/.config/qBittorrent/
 
 echo "=== Activating services in default runlevel ==="
 rc-update add microsocks default
