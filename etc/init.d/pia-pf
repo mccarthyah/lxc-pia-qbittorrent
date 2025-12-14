@@ -8,7 +8,7 @@ credfile="${envdir}/credentials.env"
 optfile="${envdir}/options.env"
 
 command="/usr/bin/screen"
-command_args="-L -Logfile /var/log/pia-pf.log -dmS pia-pf /opt/pia/build.sh"
+command_args="-L -Logfile /var/log/pia-pf.log -dmS pia-pf /opt/pia/run_vpn.sh"
 
 pidfile="/run/pia-pf.pid"
 
