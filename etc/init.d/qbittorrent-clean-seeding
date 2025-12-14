@@ -12,8 +12,6 @@ pidfile="/run/qb-clean-seeding.pid"
 LOG="/var/log/qb-clean-seeding.log"
 
 QB_URL="http://localhost:8080"
-QB_USER="admin"
-QB_PASS="adminadmin"
 CATEGORIES="movies tv games apps os music"
 INTERVAL=600        # 10 minutes
 STARTUP_DELAY=20
@@ -23,22 +21,14 @@ start() {
 
     (
         sleep "$STARTUP_DELAY"
+        last_seen=""
 
         while true; do
-            # Login
-            login=$(curl -s -c cookies.txt -d "username=$QB_USER&password=$QB_PASS" "$QB_URL/api/v2/auth/login")
-            if [ "$login" != "Ok." ]; then
-                echo "$(date) - Login failed" >> "$LOG"
-                sleep "$INTERVAL"
-                continue
-            fi
-
             # Get all torrents
-            torrents=$(curl -s -b cookies.txt "$QB_URL/api/v2/torrents/info")
+            torrents=$(curl -s "$QB_URL/api/v2/torrents/info")
 
             # Loop through categories
             for cat in $CATEGORIES; do
-                # Get hashes of torrents in this category and status seeding
                 hashes=$(echo "$torrents" \
                     | grep -Po '"hash":"\K[0-9a-f]+' \
                     | while read h; do
@@ -49,9 +39,8 @@ start() {
                         fi
                     done)
 
-                # Remove torrents
                 for h in $hashes; do
-                    curl -s -b cookies.txt -X POST \
+                    curl -s -X POST \
                         -d "hashes=$h&deleteFiles=false" \
                         "$QB_URL/api/v2/torrents/delete" >> "$LOG" 2>&1
                     echo "$(date) - Removed seeding torrent $h in category $cat" >> "$LOG"
