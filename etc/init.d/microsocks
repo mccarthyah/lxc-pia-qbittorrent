@@ -3,7 +3,7 @@
 name="microsocks"
 description="Microsocks SOCKS5 proxy"
 
-command="/usr/local/bin/microsocks"
+command="/usr/local/bin/ms"
 command_args="-p 1080"
 pidfile="/run/microsocks.pid"
 
@@ -16,7 +16,7 @@ start() {
     ebegin "Starting microsocks"
 
     # Launch microsocks silently in background
-    /usr/local/bin/microsocks -p 1080 >/dev/null 2>&1 &
+    /usr/local/bin/ms -p 1080 >/dev/null 2>&1 &
     echo $! > "$pidfile"
 
     eend $?
