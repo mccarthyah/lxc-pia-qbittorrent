@@ -17,7 +17,7 @@ apk add --no-cache \
 echo "=== Downloading latest VueTorrent release ==="
 
 VT_DIR="/home/qbittorrent/.config/qBittorrent"
-VT_UI_DIR="$VT_DIR/vuetorrent"
+VT_UI_DIR="$VT_DIR"
 VT_ZIP="$VT_DIR/vuetorrent-latest.zip"
 
 # Get latest tag name

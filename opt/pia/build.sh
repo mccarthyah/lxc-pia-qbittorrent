@@ -1,39 +1,37 @@
 #!/usr/bin/env bash
+set -euo pipefail
 
-wg-quick down pia
-
-# === Load options ===
-if [[ -f options.env ]]; then
-    source options.env
+# --------------------------------------------------
+# Bring down WireGuard if running
+# --------------------------------------------------
+if command -v wg-quick >/dev/null 2>&1; then
+    wg-quick down pia 2>/dev/null || true
 fi
 
-# === Load credentials ===
-if [[ -f credentials.env ]]; then
-    source credentials.env
-else
-    echo "Creating credentials.env for PIA login..."
-    read -rp "PIA username (p#######): " PIA_USER
-    read -rsp "PIA password: " PIA_PASS
-    echo
-    echo "PIA_USER=$PIA_USER" > credentials.env
-    echo "PIA_PASS=$PIA_PASS" >> credentials.env
+# --------------------------------------------------
+# Load configuration
+# --------------------------------------------------
+if [[ ! -f options.env ]]; then
+    echo "ERROR: options.env not found. Run build_options.sh first."
+    exit 1
 fi
 
-# === Export credentials ===
-export PIA_USER
-export PIA_PASS
+if [[ ! -f credentials.env ]]; then
+    echo "ERROR: credentials.env not found. Run build_options.sh first."
+    exit 1
+fi
 
-# === Export all options ===
-export AUTOCONNECT
-export VPN_PROTOCOL
-export PIA_PF
-export DISABLE_IPV6
-export PREFERRED_REGION
-export DIP_TOKEN
-export PIA_DNS
+source options.env
+source credentials.env
 
-# === Debug printout ===
-echo "Using configuration from options.env:"
+export PIA_USER PIA_PASS
+export AUTOCONNECT VPN_PROTOCOL PIA_PF DISABLE_IPV6
+export PREFERRED_REGION DIP_TOKEN PIA_DNS
+
+# --------------------------------------------------
+# Debug output (no secrets)
+# --------------------------------------------------
+echo "Using configuration:"
 echo "AUTOCONNECT=$AUTOCONNECT"
 echo "VPN_PROTOCOL=$VPN_PROTOCOL"
 echo "PIA_PF=$PIA_PF"
@@ -42,15 +40,23 @@ echo "PREFERRED_REGION=$PREFERRED_REGION"
 echo "DIP_TOKEN=$DIP_TOKEN"
 echo "PIA_DNS=$PIA_DNS"
 
-# === Run the setup script in the background ===
+# --------------------------------------------------
+# Run setup
+# --------------------------------------------------
+if [[ ! -x ./run_setup.sh ]]; then
+    echo "Error: run_setup.sh not found or not executable!"
+    exit 1
+fi
+
 ./run_setup.sh &
 SETUP_PID=$!
+echo "run_setup.sh started with PID $SETUP_PID"
 
-echo "run_setup.sh started with PID $SETUP_PID. It will be killed after 1 minute."
+sleep 60
 
-# === Wait 1 minute ===
-sleep 30
-
-# === Kill the setup script ===
-kill $SETUP_PID 2>/dev/null || true
-echo "run_setup.sh (PID $SETUP_PID) has been killed."
+if kill -0 $SETUP_PID 2>/dev/null; then
+    kill $SETUP_PID 2>/dev/null || true
+    echo "run_setup.sh (PID $SETUP_PID) killed after timeout."
+else
+    echo "run_setup.sh exited normally."
+fi
