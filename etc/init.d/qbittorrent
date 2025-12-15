@@ -7,23 +7,20 @@ command="/usr/bin/qbittorrent-nox"
 command_args="--webui-port=8080"
 
 pidfile="/run/qbittorrent.pid"
+WEBUI="http://127.0.0.1:8080"
+WAIT_SECS=30
 
-# Ensure correct service dependencies
 depend() {
     need net
     use logger
     need wg-pia
     need pia-pf
-#    need pia-port
-#    after pia-port
 }
 
 start_pre() {
-    # Ensure runtime directory exists
     mkdir -p /run
     chown qbittorrent:qbittorrent /run
 
-    # Ensure HOME and required dirs exist
     mkdir -p /home/qbittorrent/.config
     mkdir -p /home/qbittorrent/.cache
     mkdir -p /home/qbittorrent/.local/share
@@ -40,6 +37,22 @@ start() {
         --env HOME="/home/qbittorrent" \
         --exec $command -- $command_args
     eend $?
+}
+
+start_post() {
+    ebegin "Updating qBittorrent search plugins"
+
+    for i in $(seq 1 $WAIT_SECS); do
+        if curl -fs "$WEBUI/api/v2/app/version" >/dev/null; then
+            curl -fs -X POST "$WEBUI/api/v2/search/updatePlugins" \
+                && eend 0 && return
+            break
+        fi
+        sleep 1
+    done
+
+    ewarn "WebUI not ready — plugin update skipped"
+    eend 1
 }
 
 stop() {
