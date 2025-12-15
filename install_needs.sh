@@ -99,3 +99,5 @@ echo "connected to the fastest server supporting port forwarding."
 echo "You can access the WebUI for qbittorrent at:"
 echo "http://${SYSTEM_IP}:8080"
 echo "=============================================="
+
+reboot
