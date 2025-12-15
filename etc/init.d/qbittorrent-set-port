@@ -1,46 +1,49 @@
 #!/sbin/openrc-run
 
-description="Extract PIA forwarded port and keep qBittorrent updated"
+description="Push PIA forwarded port to qBittorrent WebUI"
 
 depend() {
     need net
-    need pia-pf
     need qbittorrent
-    after pia-pf qbittorrent
+    after qbittorrent
 }
 
 pidfile="/run/qbittorrent-set-port.pid"
 
+QBT_URL="http://localhost:8080"
 LOG="/var/log/pia-pf.log"
 PORT_FILE="/run/pia-port.txt"
-QBT_URL="http://localhost:8080"
 INTERVAL=600
-STARTUP_DELAY=20
+START_DELAY=15
 
 start() {
     ebegin "Starting qbittorrent-set-port"
 
     (
-        sleep "$STARTUP_DELAY"
+        sleep "$START_DELAY"
+
+        # Wait until qBittorrent API is ACTUALLY ready
+        until curl -sf "$QBT_URL/api/v2/app/version" >/dev/null 2>&1; do
+            sleep 2
+        done
+
         last_port=""
 
         while true; do
-            if [ -f "$LOG" ]; then
-                port="$(tail -n 7 "$LOG" \
-                    | head -n 1 \
-                    | sed -r 's/\x1B\[[0-9;]*[mK]//g' \
-                    | tr -cd '0-9')"
+            port=$(grep "Forwarded port" "$LOG" | tail -n1 \
+                | sed -r 's/\x1B\[[0-9;]*[mK]//g' \
+                | tr -d '\r' \
+                | tr -cd '0-9')
 
-                if [ -n "$port" ] && [ "$port" != "$last_port" ]; then
-                    echo "$port" > "$PORT_FILE"
+            if [ -n "$port" ] && [ "$port" != "$last_port" ]; then
+                echo "$port" > "$PORT_FILE"
 
-                    curl -sf -X POST \
-                        -d "json={\"listen_port\": $port}" \
-                        "$QBT_URL/api/v2/app/setPreferences" \
-                        >> /var/log/qbittorrent-set-port.log 2>&1
+                curl -i -X POST \
+                    -d "json={\"listen_port\": $port}" \
+                    "$QBT_URL/api/v2/app/setPreferences" \
+                    >> /var/log/qbittorrent-set-port.log 2>&1
 
-                    last_port="$port"
-                fi
+                last_port="$port"
             fi
 
             sleep "$INTERVAL"
