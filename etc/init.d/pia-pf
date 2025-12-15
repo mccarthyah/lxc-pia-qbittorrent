@@ -7,11 +7,12 @@ envdir="/opt/pia"
 credfile="${envdir}/credentials.env"
 optfile="${envdir}/options.env"
 
-command="/usr/bin/screen"
-command_args="-L -Logfile /var/log/pia-pf.log -dmS pia-pf /opt/pia/run_vpn.sh"
+SCREEN="/usr/bin/screen"
+SESSION="pia-pf"
+LOGFILE="/var/log/pia-pf.log"
+PIDFILE="/run/pia-pf.pid"
 
-pidfile="/run/pia-pf.pid"
-
+# Dependencies
 depend() {
     need net
     need wg-pia
@@ -36,29 +37,37 @@ load_env_file() {
 }
 
 start() {
-    ebegin "Starting pia-pf"
+    ebegin "Starting pia-pf (screen)"
 
-    # Load environment files into the service process
+    # Reset the log safely (truncate, don't delete)
+    : > "$LOGFILE"
+
+    # Load environment files
     load_env_file "$credfile"
     load_env_file "$optfile"
 
     # Ensure the script runs inside /opt/pia
     cd /opt/pia || exit 1
 
-    # Launch screen session
-    ${command} ${command_args}
+    # Kill stale screen session if it exists
+    $SCREEN -S "$SESSION" -X quit 2>/dev/null || true
 
-    # Dummy pid for OpenRC tracking
-    echo $$ > "$pidfile"
+    # Start screen detached with stdin closed, stdout/stderr logged
+    $SCREEN -L -Logfile "$LOGFILE" -dmS "$SESSION" sh -c "/opt/pia/run_vpn.sh </dev/null"
 
-    eend $?
+    # Record screen session PID for OpenRC
+    sleep 1
+    pid="$($SCREEN -ls | awk '/\.'"$SESSION"'\s/{print $1}' | cut -d. -f1)"
+    [ -n "$pid" ] && echo "$pid" > "$PIDFILE"
+
+    eend 0
 }
 
 stop() {
     ebegin "Stopping pia-pf"
 
-    /usr/bin/screen -S pia-pf -X quit 2>/dev/null
-    rm -f "$pidfile"
+    $SCREEN -S "$SESSION" -X quit 2>/dev/null || true
+    rm -f "$PIDFILE"
 
-    eend $?
+    eend 0
 }
