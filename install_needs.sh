@@ -9,7 +9,7 @@ mkdir -p /home/qbittorrent/.cache
 echo "=== Installing required packages ==="
 apk add --no-cache \
     xz screen wireguard-tools qbittorrent-nox git nano ncurses jq \
-    iptables curl unzip
+    iptables curl unzip python3
 
 # --------------------------------------------------
 # Download latest VueTorrent release
