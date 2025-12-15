@@ -13,7 +13,7 @@ pidfile="/run/qbittorrent-set-port.pid"
 QBT_URL="http://localhost:8080"
 LOG="/var/log/pia-pf.log"
 PORT_FILE="/run/pia-port.txt"
-INTERVAL=600
+INTERVAL=60          # refresh every 1 minute
 START_DELAY=15
 
 start() {
@@ -22,7 +22,7 @@ start() {
     (
         sleep "$START_DELAY"
 
-        # Wait until qBittorrent API is ACTUALLY ready
+        # Wait until qBittorrent API is actually ready
         until curl -sf "$QBT_URL/api/v2/app/version" >/dev/null 2>&1; do
             sleep 2
         done
@@ -30,11 +30,13 @@ start() {
         last_port=""
 
         while true; do
+            # Extract the latest forwarded port from the PIA log
             port=$(grep "Forwarded port" "$LOG" | tail -n1 \
                 | sed -r 's/\x1B\[[0-9;]*[mK]//g' \
                 | tr -d '\r' \
                 | tr -cd '0-9')
 
+            # Only push to qBittorrent if the port changed
             if [ -n "$port" ] && [ "$port" != "$last_port" ]; then
                 echo "$port" > "$PORT_FILE"
 
