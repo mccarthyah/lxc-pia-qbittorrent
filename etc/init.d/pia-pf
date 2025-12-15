@@ -14,6 +14,7 @@ pidfile="/run/pia-pf.pid"
 
 depend() {
     need net
+    need wg-pia
 }
 
 # Safely load KEY=VALUE lines from env files
