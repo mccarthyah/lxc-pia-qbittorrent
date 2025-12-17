@@ -1,0 +1,64 @@
+#!/sbin/openrc-run
+
+name="qbt-clean-seeding"
+description="Remove seeding torrents from selected categories"
+
+pidfile="/run/qbt-clean-seeding.pid"
+command="/bin/sh"
+
+depend() {
+  need net
+  need qbittorrent
+  after qbittorrent
+}
+
+start() {
+  ebegin "Starting qbt-clean-seeding"
+
+  start-stop-daemon \
+    --start \
+    --background \
+    --make-pidfile \
+    --pidfile "$pidfile" \
+    --exec "$command" -- -c "
+      exec >> /var/log/qbt-clean-seeding.log 2>&1
+
+      QBIT='http://localhost:8080'
+      INTERVAL=300
+      CATEGORIES='tv movies apps games os music'
+
+      while true; do
+        echo \"[\$(date)] Checking seeding torrents\"
+
+        for CAT in \$CATEGORIES; do
+          HASHES=\$(curl -s \"\$QBIT/api/v2/torrents/info?category=\$CAT\" \
+            | jq -r '
+                [.[]
+                  | select(.state == \"uploading\" or .state == \"stalledUP\" or .state == \"forcedUP\")
+                  | .hash] | join(\"|\")
+              ')
+
+          if [ -n \"\$HASHES\" ]; then
+            echo \"[\$(date)] Removing from category \$CAT: \$HASHES\"
+
+            curl -s -X POST \
+              --data-urlencode \"hashes=\$HASHES\" \
+              --data \"deleteFiles=false\" \
+              \"\$QBIT/api/v2/torrents/delete\"
+          else
+            echo \"[\$(date)] No seeding torrents in \$CAT\"
+          fi
+        done
+
+        sleep \"\$INTERVAL\"
+      done
+    "
+
+  eend $?
+}
+
+stop() {
+  ebegin "Stopping qbt-clean-seeding"
+  start-stop-daemon --stop --pidfile "$pidfile"
+  eend $?
+}
