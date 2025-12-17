@@ -1,67 +1,62 @@
 #!/sbin/openrc-run
 
-description="Remove seeding torrents in specific categories"
+name="qbt-remove-tv-seeding"
+description="Remove seeding/uploading torrents in category tv"
+
+pidfile="/run/qbt-remove-tv-seeding.pid"
+command="/bin/sh"
 
 depend() {
-    need net
-    need qbittorrent
-    after qbittorrent
+  need net
+  need qbittorrent
+  after qbittorrent
 }
 
-pidfile="/run/qb-clean-seeding.pid"
-LOG="/var/log/qb-clean-seeding.log"
-
-QB_URL="http://localhost:8080"
-CATEGORIES="movies tv games apps os music"
-INTERVAL=600        # 10 minutes
-STARTUP_DELAY=20
-
 start() {
-    ebegin "Starting qb-clean-seeding"
+  ebegin "Starting qbt-remove-tv-seeding"
 
-    (
-        sleep "$STARTUP_DELAY"
-        last_seen=""
+  start-stop-daemon \
+    --start \
+    --background \
+    --make-pidfile \
+    --pidfile "$pidfile" \
+    --exec "$command" -- -c "
+      exec >> /var/log/qbt-remove-tv-seeding.log 2>&1
 
-        while true; do
-            # Get all torrents
-            torrents=$(curl -s "$QB_URL/api/v2/torrents/info")
+      QBIT='http://localhost:8080'
+      CATEGORY='tv'
+      INTERVAL=300
 
-            # Loop through categories
-            for cat in $CATEGORIES; do
-                hashes=$(echo "$torrents" \
-                    | grep -Po '"hash":"\K[0-9a-f]+' \
-                    | while read h; do
-                        status=$(echo "$torrents" | grep -Po '"hash":"'"$h"'"(.*?)"state":"\K[^"]+')
-                        category=$(echo "$torrents" | grep -Po '"hash":"'"$h"'"(.*?)"category":"\K[^"]*')
-                        if [ "$category" = "$cat" ] && [ "$status" = "uploading" ]; then
-                            echo "$h"
-                        fi
-                    done)
+      while true; do
+        echo \"[\$(date)] Checking seeding torrents in category tv\"
 
-                for h in $hashes; do
-                    curl -s -X POST \
-                        -d "hashes=$h&deleteFiles=false" \
-                        "$QB_URL/api/v2/torrents/delete" >> "$LOG" 2>&1
-                    echo "$(date) - Removed seeding torrent $h in category $cat" >> "$LOG"
-                done
-            done
+        HASHES=\$(curl -s \"\$QBIT/api/v2/torrents/info?category=\$CATEGORY\" \
+          | jq -r '
+              [.[]
+                | select(.state == \"uploading\" or .state == \"stalledUP\" or .state == \"forcedUP\")
+                | .hash] | join(\"|\")
+            ')
 
-            sleep "$INTERVAL"
-        done
-    ) &
+        if [ -n \"\$HASHES\" ]; then
+          echo \"[\$(date)] Removing torrents: \$HASHES\"
 
-    echo $! > "$pidfile"
-    eend 0
+          curl -s -X POST \
+            --data-urlencode \"hashes=\$HASHES\" \
+            --data \"deleteFiles=false\" \
+            \"\$QBIT/api/v2/torrents/delete\"
+        else
+          echo \"[\$(date)] No seeding torrents found\"
+        fi
+
+        sleep \"\$INTERVAL\"
+      done
+    "
+
+  eend $?
 }
 
 stop() {
-    ebegin "Stopping qb-clean-seeding"
-
-    if [ -f "$pidfile" ]; then
-        kill "$(cat "$pidfile")" 2>/dev/null
-        rm -f "$pidfile"
-    fi
-
-    eend 0
+  ebegin "Stopping qbt-remove-tv-seeding"
+  start-stop-daemon --stop --pidfile "$pidfile"
+  eend $?
 }
