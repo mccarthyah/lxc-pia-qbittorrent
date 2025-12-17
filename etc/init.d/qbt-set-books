@@ -24,24 +24,17 @@ start() {
       exec >> /var/log/qbt-set-books.log 2>&1
 
       QBIT="http://localhost:8080"
-      USER="admin"
-      PASS="luigina"
       TRACKER="t.myanonamouse.net"
       CATEGORY="books"
       INTERVAL=300
-      COOKIE="/run/qbt-set-books.cookies"
 
       while true; do
         echo "[$(date)] Checking torrents"
 
-        curl -s -c "$COOKIE" -X POST \
-          --data "username=$USER&password=$PASS" \
-          "$QBIT/api/v2/auth/login" > /dev/null
-
         HASHES=""
 
-        for HASH in $(curl -s -b "$COOKIE" "$QBIT/api/v2/torrents/info" | jq -r ".[].hash"); do
-          if curl -s -b "$COOKIE" \
+        for HASH in $(curl -s "$QBIT/api/v2/torrents/info" | jq -r ".[].hash"); do
+          if curl -s \
             "$QBIT/api/v2/torrents/trackers?hash=$HASH" \
             | jq -e --arg t "$TRACKER" ".[] | select(.url | contains(\$t))" > /dev/null
           then
@@ -52,7 +45,7 @@ start() {
         HASHES="${HASHES#|}"
 
         if [ -n "$HASHES" ]; then
-          curl -s -b "$COOKIE" -X POST \
+          curl -s -X POST \
             --data-urlencode "hashes=$HASHES" \
             --data-urlencode "category=$CATEGORY" \
             "$QBIT/api/v2/torrents/setCategory"
