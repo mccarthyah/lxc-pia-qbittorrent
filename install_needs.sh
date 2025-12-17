@@ -60,11 +60,9 @@ rc-update add pia-pf default
 rc-update add qbittorrent-set-port default
 rc-update add qbittorrent default
 rc-update add wg-pia default
-rc-update add qbittorrent-clean-seeding default
-rc-update add qbt-set-books default
-
+rc-update add qbt-api-engine
 echo "=== Setting up qbittorrent local auth ==="
-./qbt_local_auth.sh
+./qbt_local_auth.sh 
 chown -R qbittorrent:qbittorrent /home/qbittorrent
 
 echo "=== Entering /opt/pia for further setup ==="
