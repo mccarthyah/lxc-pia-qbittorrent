@@ -1,0 +1,270 @@
+# qBittorrent API Engine
+
+A lightweight OpenRC service to automate torrent management via the **qBittorrent Web API**.
+
+It allows you to:
+
+- Automatically **categorize torrents** (e.g., “books”)  
+- **Remove seeding torrents** from specific categories  
+- **Pause or resume torrents** based on rules  
+- Run safely with **dry-run mode** and **uncategorized torrent protection**
+
+---
+
+## Table of Contents
+
+1. [Overview](#overview)  
+2. [Engine Configuration (`engine.conf`)](#engine-configuration-engineconf)  
+3. [Rules (`rules.d/*.conf`)](#rules-rulesdconf)  
+4. [Rule Examples](#rule-examples)  
+5. [Rule File Naming](#rule-file-naming)  
+6. [Installation & Usage](#installation--usage)  
+7. [Logging](#logging)  
+8. [Supported Actions](#supported-actions)  
+
+## Overview
+
+The engine runs continuously, polling torrents at a configurable interval and applying **rules** defined in `/etc/qbt-api-engine/rules.d/`.  
+
+**Safety features:**
+
+- Protects **uncategorized torrents** from deletion  
+- Books or other categorization rules only apply if torrent has **no category**  
+- Dry-run mode logs actions without modifying torrents  
+
+---
+
+## Engine Configuration (`engine.conf`)
+
+File location:
+/etc/qbt-api-engine/engine.conf
+
+### Parameters
+
+| Variable   | Description |
+|------------|-------------|
+| `QBIT_URL` | URL of qBittorrent Web API, e.g., `http://localhost:8080` |
+| `INTERVAL` | Polling interval in seconds (default 300 = 5 min) |
+| `LOG`      | Log file path, e.g., `/var/log/qbt-api-engine.log` |
+| `DRY_RUN`  | `1` = log actions only, `0` = apply actions |
+
+### Example
+
+QBIT_URL="http://localhost:8080"
+INTERVAL=300
+LOG="/var/log/qbt-api-engine.log"
+DRY_RUN=1
+
+---
+
+## **README Part 3: Rules Configuration**
+
+```markdown
+## Rules (`rules.d/*.conf`)
+
+Each file in `rules.d/` defines a **single rule**. Rules are applied in **alphanumeric order**.
+
+### Rule Parameters
+
+| Variable          | Description |
+|------------------|-------------|
+| `MATCH_CATEGORY`  | Space-separated categories to match. Leave empty to match all. |
+| `MATCH_STATE`     | Space-separated torrent states to match (`uploading`, `stalledUP`, `forcedUP`). Leave empty to match all. |
+| `MATCH_TRACKER`   | Substring of tracker URL to match. Leave empty to ignore. |
+| `ACTION`          | Action to perform: `setCategory`, `delete`, `pause`, `resume` |
+| `ACTION_CATEGORY` | Target category (only used for `setCategory`) |
+| `DELETE_FILES`    | Optional for `delete`: `"true"` deletes files, `"false"` keeps them (default `false`) |
+
+### Rules Logic
+
+1. Engine filters torrents based on category, state, and tracker.  
+2. **Uncategorized torrents** are protected from deletion.  
+3. `setCategory` only applies to torrents **without a category**.  
+4. Dry-run logs what would happen without changing torrents.
+
+## Rule Examples
+
+### Clean Seeding Rule
+
+`rules.d/20-clean-seeding.conf`
+
+```sh
+MATCH_CATEGORY="tv movies apps games os music"
+MATCH_STATE="uploading stalledUP forcedUP"
+ACTION="delete"
+DELETE_FILES="false"
+
+	•	Removes torrents in the listed categories that are actively seeding.
+	•	Files remain on disk.
+	•	Ignores uncategorized torrents.
+
+Books Categorization Rule
+
+rules.d/30-books.conf
+
+MATCH_TRACKER="myanonamouse.net"
+MATCH_CATEGORY=""
+MATCH_STATE=""
+ACTION="setCategory"
+ACTION_CATEGORY="books"
+
+	•	Sets category to books for torrents from myanonamouse.net.
+	•	Only applies if torrent has no category.
+
+---
+
+## **README Part 5: Rule File Naming, Installation, Logging, and Actions**
+
+```markdown
+## Rule File Naming
+
+- Rules run in **alphanumeric order**.  
+- Use numeric prefixes to control order: e.g., `10-books.conf`, `20-clean-seeding.conf`.  
+
+---
+
+## Installation & Usage
+
+```sh
+# Make the service executable
+chmod +x /etc/init.d/qbt-api-engine
+
+# Add to default runlevel
+rc-update add qbt-api-engine default
+
+# Start the service
+rc-service qbt-api-engine start
+
+# View live logs
+tail -f /var/log/qbt-api-engine.log
+
+	•	Dry-run mode logs actions without applying them (DRY_RUN=1).
+	•	Set DRY_RUN=0 in engine.conf to enable actual actions.
+
+Logging
+	•	Logs all rule applications and affected torrent hashes.
+	•	Dry-run mode shows what would be applied.
+
+Example:
+
+[2025-12-17 18:00:00] Applying rule 30-books.conf
+[2025-12-17 18:00:00] Hashes to update: ABC123|DEF456
+[2025-12-17 18:00:00] DRY-RUN: Would apply setCategory on hashes: ABC123|DEF456
+
+Supported Actions
+
+Action
+Description
+setCategory
+Set torrent category (only if blank or not already target)
+delete
+Remove torrent from qBittorrent. Files are kept unless DELETE_FILES="true"
+pause
+Pause matching torrents
+resume
+Resume matching torrents
+
+Safety Tips:
+	•	Always test rules with DRY_RUN=1 first.
+	•	Separate setCategory and delete rules into different files.
+	•	Use descriptive filenames and prefixes for rule order.
+	•	Avoid DELETE_FILES="true" unless intentional.
+
+# Quick Start Cheat Sheet
+
+This cheat sheet provides the essential commands and examples for using the qBittorrent API Engine.
+
+---
+
+## 1. Engine Setup
+
+```sh
+# Make the service executable
+chmod +x /etc/init.d/qbt-api-engine
+
+# Add to default runlevel
+rc-update add qbt-api-engine default
+
+# Start service
+rc-service qbt-api-engine start
+
+# Stop service
+rc-service qbt-api-engine stop
+
+# Restart service
+rc-service qbt-api-engine restart
+
+2. Configuration
+
+Engine configuration: /etc/qbt-api-engine/engine.conf
+
+QBIT_URL="http://localhost:8080"
+INTERVAL=300       # 5 minutes
+LOG="/var/log/qbt-api-engine.log"
+DRY_RUN=1          # 1=test only, 0=apply actions
+
+	•	Change DRY_RUN=1 → 0 to enable real actions.
+	•	Adjust INTERVAL to control how often rules are applied.
+
+3. Rule Examples
+
+Books categorization: /etc/qbt-api-engine/rules.d/30-books.conf
+
+MATCH_TRACKER="myanonamouse.net"
+MATCH_CATEGORY=""
+MATCH_STATE=""
+ACTION="setCategory"
+ACTION_CATEGORY="books"
+
+Clean seeding torrents: /etc/qbt-api-engine/rules.d/20-clean-seeding.conf
+
+MATCH_CATEGORY="tv movies apps games os music"
+MATCH_STATE="uploading stalledUP forcedUP"
+ACTION="delete"
+DELETE_FILES="false"
+
+	•	Multiple categories can be listed, separated by spaces.
+	•	DELETE_FILES="false" ensures files remain on disk.
+
+4. Testing Rules (Dry-Run)
+
+# Check which torrents would be affected without making changes
+DRY_RUN=1 rc-service qbt-api-engine restart
+
+# View logs
+tail -f /var/log/qbt-api-engine.log
+
+	•	Dry-run mode logs the hashes that would be updated.
+	•	Safe for verifying rules before applying live actions.
+
+5. Applying Actions
+
+# Enable real actions
+DRY_RUN=0
+
+# Restart service to apply rules
+rc-service qbt-api-engine restart
+
+	•	The engine will now apply categories, delete torrents, pause/resume according to rules.
+
+6. Logs
+
+# View latest actions
+tail -f /var/log/qbt-api-engine.log
+
+Example log entry:
+
+[2025-12-17 18:00:00] Applying rule 30-books.conf
+[2025-12-17 18:00:00] Hashes to update: ABC123|DEF456
+[2025-12-17 18:00:00] DRY-RUN: Would apply setCategory on hashes: ABC123|DEF456
+
+	•	Confirms which torrents matched the rule and the actions taken.
+
+7. Recommended Workflow
+	1.	Configure engine.conf with DRY_RUN=1.
+	2.	Write rules in rules.d/ (separate files for categorization vs deletion).
+	3.	Start the engine and check logs for dry-run results.
+	4.	Once verified, set DRY_RUN=0 and restart engine.
+	5.	Monitor logs to ensure actions are applied as expected.
+
+

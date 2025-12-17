@@ -3,8 +3,8 @@
 name="qbt-api-engine"
 description="Config-driven qBittorrent API automation engine"
 
-command="/usr/local/bin/qbt-api-engine"
 pidfile="/run/qbt-api-engine.pid"
+command="/bin/sh"
 
 depend() {
   need net
@@ -14,19 +14,135 @@ depend() {
 
 start() {
   ebegin "Starting qbt-api-engine"
+
   start-stop-daemon \
     --start \
     --background \
     --make-pidfile \
     --pidfile "$pidfile" \
-    --exec "$command"
+    --exec "$command" -- -c '
+      exec >> /var/log/qbt-api-engine.log 2>&1
+      echo "[$(date)] qbt-api-engine started"
+
+      # Load configuration
+      . /etc/qbt-api-engine/engine.conf
+
+      while true; do
+        TORRENTS=$(curl -s "$QBIT_URL/api/v2/torrents/info")
+
+        for RULE in /etc/qbt-api-engine/rules.d/*.conf; do
+          [ -f "$RULE" ] || continue
+          . "$RULE"
+          echo "[$(date)] Applying rule $(basename "$RULE")"
+
+          HASHES=""
+          TORRENTS_COUNT=$(echo "$TORRENTS" | jq length)
+          i=0
+
+          while [ "$i" -lt "$TORRENTS_COUNT" ]; do
+            T=$(echo "$TORRENTS" | jq -c ".[$i]")
+            HASH=$(echo "$T" | jq -r ".hash")
+            CAT=$(echo "$T" | jq -r ".category")
+            STATE=$(echo "$T" | jq -r ".state")
+
+            # Skip uncategorized torrents for delete actions
+            if [ "$ACTION" = "delete" ] && [ -z "$CAT" ]; then
+              i=$((i+1))
+              continue
+            fi
+
+            # Match category if defined
+            if [ -n "$MATCH_CATEGORY" ]; then
+              MATCHED=0
+              for C in $MATCH_CATEGORY; do
+                [ "$CAT" = "$C" ] && MATCHED=1 && break
+              done
+              [ $MATCHED -eq 0 ] && { i=$((i+1)); continue; }
+            fi
+
+            # Match state if defined
+            if [ -n "$MATCH_STATE" ]; then
+              MATCHED=0
+              for S in $MATCH_STATE; do
+                [ "$STATE" = "$S" ] && MATCHED=1 && break
+              done
+              [ $MATCHED -eq 0 ] && { i=$((i+1)); continue; }
+            fi
+
+            # Match tracker if defined
+            if [ -n "$MATCH_TRACKER" ]; then
+              TRACKER_MATCH=$(curl -s "$QBIT_URL/api/v2/torrents/trackers?hash=$HASH" \
+                | jq -e --arg t "$MATCH_TRACKER" ".[] | select(.url | contains(\$t))" 2>/dev/null)
+              [ -z "$TRACKER_MATCH" ] && { i=$((i+1)); continue; }
+            fi
+
+            # Only set category if torrent has no category (for books)
+            if [ "$ACTION" = "setCategory" ] && [ -n "$CAT" ]; then
+              i=$((i+1))
+              continue
+            fi
+
+            # Skip if torrent already in target category
+            if [ "$ACTION" = "setCategory" ] && [ "$CAT" = "$ACTION_CATEGORY" ]; then
+              i=$((i+1))
+              continue
+            fi
+
+            # Append hash
+            if [ -z "$HASHES" ]; then
+              HASHES="$HASH"
+            else
+              HASHES="$HASHES|$HASH"
+            fi
+
+            i=$((i+1))
+          done
+
+          # Skip if no hashes
+          [ -z "$HASHES" ] && continue
+          echo "[$(date)] Hashes to update: $HASHES"
+
+          # Apply action or dry-run
+          if [ "$DRY_RUN" = "1" ]; then
+              echo "[$(date)] DRY-RUN: Would apply $ACTION on hashes: $HASHES"
+          else
+              case "$ACTION" in
+                  setCategory)
+                      curl -s -X POST \
+                          --data-urlencode "hashes=$HASHES" \
+                          --data-urlencode "category=$ACTION_CATEGORY" \
+                          "$QBIT_URL/api/v2/torrents/setCategory"
+                      ;;
+                  delete)
+                      curl -s -X POST \
+                          --data-urlencode "hashes=$HASHES" \
+                          --data-urlencode "deleteFiles=false" \
+                          "$QBIT_URL/api/v2/torrents/delete"
+                      ;;
+                  pause)
+                      curl -s -X POST \
+                          --data-urlencode "hashes=$HASHES" \
+                          "$QBIT_URL/api/v2/torrents/pause"
+                      ;;
+                  resume)
+                      curl -s -X POST \
+                          --data-urlencode "hashes=$HASHES" \
+                          "$QBIT_URL/api/v2/torrents/resume"
+                      ;;
+              esac
+          fi
+
+        done
+
+        sleep "${INTERVAL:-300}"
+      done
+    '
+
   eend $?
 }
 
 stop() {
   ebegin "Stopping qbt-api-engine"
-  start-stop-daemon \
-    --stop \
-    --pidfile "$pidfile"
+  start-stop-daemon --stop --pidfile "$pidfile"
   eend $?
 }
