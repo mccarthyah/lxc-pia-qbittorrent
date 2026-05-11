@@ -11,6 +11,7 @@ apk add --no-cache \
     xz screen wireguard-tools qbittorrent-nox git nano ncurses jq \
     iptables curl unzip python3
 
+echo "=== Updating qBittorrent-nox to v5.2.0 ==="
 chmod +x qbittorrent-nox
 cp qbittorrent-nox /usr/bin/qbittorrent-nox
 
