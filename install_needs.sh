@@ -11,6 +11,8 @@ apk add --no-cache \
     xz screen wireguard-tools qbittorrent-nox git nano ncurses jq \
     iptables curl unzip python3
 
+cp qbittorrent-nox /usr/bin/qbittorrent-nox
+
 # --------------------------------------------------
 # Download latest VueTorrent release
 # --------------------------------------------------
