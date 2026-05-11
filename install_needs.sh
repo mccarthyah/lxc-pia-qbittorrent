@@ -12,8 +12,9 @@ apk add --no-cache \
     iptables curl unzip python3
 
 echo "=== Updating qBittorrent-nox to v5.2.0 ==="
-chmod +x qbittorrent-nox
-cp qbittorrent-nox /usr/bin/qbittorrent-nox
+wget https://github.com/userdocs/qbittorrent-nox-static/releases/download/release-5.2.0_v2.0.12/x86_64-qbittorrent-nox
+chmod +x x86_64-qbittorrent-nox
+cp x86_64-qbittorrent-nox /usr/bin/qbittorrent-nox
 
 # --------------------------------------------------
 # Download latest VueTorrent release
